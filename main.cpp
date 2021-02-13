@@ -35,60 +35,6 @@ struct pkt {
   char payload[20];
 };
 
-/********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
-
-
-
-
-/* called from layer 5, passed the data to be sent to other side */
-void A_output(msg message)
-{
-
-}
-
-void B_output(msg message)  /* need be completed only for extra credit */
-{
-
-}
-
-/* called from layer 3, when a packet arrives for layer 4 */
-void A_input(pkt packet)
-{
-
-}
-
-/* called when A's timer goes off */
-void A_timerinterrupt()
-{
-
-}
-
-/* the following routine will be called once (only) before any other */
-/* entity A routines are called. You can use it to do any initialization */
-void A_init()
-{
-}
-
-
-/* Note that with simplex transfer from a-to-B, there is no B_output() */
-
-/* called from layer 3, when a packet arrives for layer 4 at B*/
-void B_input(pkt packet)
-{
-}
-
-/* called when B's timer goes off */
-void B_timerinterrupt()
-{
-}
-
-/* the following rouytine will be called once (only) before any other */
-/* entity B routines are called. You can use it to do any initialization */
-void B_init()
-{
-}
-
-
 /*****************************************************************
 ***************** NETWORK EMULATION CODE STARTS BELOW ***********
 The code below emulates the layer 3 and below network environment:
@@ -156,9 +102,8 @@ float jimsrand()
 /********************* EVENT HANDLINE ROUTINES *******/
 /*  The next set of routines handle the event list   */
 /*****************************************************/
-
 void insertevent(event *p) {
-  struct event *q, *qold;
+  event *q, *qold;
 
   if (TRACE > 2) {
     printf("            INSERTEVENT: time is %lf\n", time);
@@ -192,7 +137,6 @@ void insertevent(event *p) {
 
 void generate_next_arrival() {
   double log(), ceil();
-  char *malloc();
   float ttime;
   int tempint;
 
@@ -214,11 +158,9 @@ void generate_next_arrival() {
   insertevent(evptr);
 }
 
-
-
 void printevlist()
 {
-  struct event *q;
+  event *q;
   int i;
   printf("--------------\nEvent List Follows:\n");
   for(q = evlist; q!=nullptr; q=q->next) {
@@ -234,10 +176,11 @@ void printevlist()
 /* called by students routine to cancel a previously-started timer */
 void stoptimer(int AorB) /* A or B is trying to stop timer */
 {
-  struct event *q, *qold;
+  event *q, *qold;
 
   if (TRACE > 2)
     printf("          STOP TIMER: stopping timer at %f\n", time);
+
   /* for (q=evlist; q!=NULL && q->next!=NULL; q = q->next)  */
   for (q = evlist; q != nullptr; q = q->next)
     if ((q->evtype == TIMER_INTERRUPT && q->eventity == AorB)) {
@@ -253,6 +196,7 @@ void stoptimer(int AorB) /* A or B is trying to stop timer */
         q->next->prev = q->prev;
         q->prev->next = q->next;
       }
+
       free(q);
       return;
     }
@@ -286,11 +230,9 @@ void starttimer(int AorB, float increment) /* A or B is trying to stop timer */
 }
 
 
-/************************** TOLAYER3 ***************/
 void tolayer3(int AorB,pkt packet) /* A or B is trying to stop timer */
 {
-  event  *q;
-
+  event *q;
   ntolayer3++;
 
 /* simulate losses: */
@@ -301,12 +243,9 @@ void tolayer3(int AorB,pkt packet) /* A or B is trying to stop timer */
     return;
   }
 
-/* make a copy of the packet student just gave me since he/she may decide */
-/* to do something with the packet after we return back to him/her */
-
-  //mypktptr = (struct pkt *) malloc(sizeof(struct pkt));
+  /* make a copy of the packet student just gave me since he/she may decide */
+  /* to do something with the packet after we return back to him/her */
   auto mypktptr = new pkt;
-
   mypktptr->seqnum = packet.seqnum;
   mypktptr->acknum = packet.acknum;
   mypktptr->checksum = packet.checksum;
@@ -334,9 +273,10 @@ void tolayer3(int AorB,pkt packet) /* A or B is trying to stop timer */
    currently in the medium on their way to the destination */
   float lastime = time;
   /* for (q=evlist; q!=NULL && q->next!=NULL; q = q->next) */
-  for (q = evlist; q != nullptr; q = q->next)
+  for (q = evlist; q != nullptr; q = q->next){
     if ((q->evtype == FROM_LAYER3 && q->eventity == evptr->eventity))
       lastime = q->evtime;
+  }
   evptr->evtime = lastime + 1 + 9 * jimsrand();
 
 
@@ -344,7 +284,7 @@ void tolayer3(int AorB,pkt packet) /* A or B is trying to stop timer */
   if (jimsrand() < corruptprob) {
     ncorrupt++;
     float x = jimsrand();
-    if (x< .75)
+    if (x < .75)
       mypktptr->payload[0] = 'Z';   /* corrupt payload */
     else if (x < .875)
       mypktptr->seqnum = 999999;
@@ -370,9 +310,78 @@ void tolayer5(int AorB, char datasent[]) {
   }
 }
 
+/************************************************************************/
+
+
+
+/********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
+
+/* called from layer 5, passed the data to be sent to other side */
+void A_output(msg message)
+{
+  /* Make packet */
+
+  /* Send to layer 3 */
+
+  /* Start timer */
+
+}
+
+void B_output(msg message)  /* need be completed only for extra credit */
+{
+
+}
+
+/* called from layer 3, when a packet arrives for layer 4 */
+void A_input(pkt packet)
+{
+
+}
+
+/* called when A's timer goes off */
+void A_timerinterrupt()
+{
+
+}
+
+/* the following routine will be called once (only) before any other */
+/* entity A routines are called. You can use it to do any initialization */
+void A_init()
+{
+}
+
+
+/* Note that with simplex transfer from a-to-B, there is no B_output() */
+
+/* called from layer 3, when a packet arrives for layer 4 at B*/
+void B_input(pkt packet)
+{
+}
+
+/* called when B's timer goes off */
+void B_timerinterrupt()
+{
+}
+
+/* the following rouytine will be called once (only) before any other */
+/* entity B routines are called. You can use it to do any initialization */
+void B_init()
+{
+}
+
+/************************************************************************/
+
+
 /* initialize the simulator */
 void init()
 {
+  nsimmax = 1;
+  lossprob = .0;
+  corruptprob = .0;
+  lambda = 0.5;
+  TRACE = 2;
+
+  /*
   printf("-----  Stop and Wait Network Simulator Version 1.1 -------- \n\n");
   printf("Enter the number of messages to simulate: ");
   scanf("%d", &nsimmax);
@@ -384,6 +393,8 @@ void init()
   scanf("%f", &lambda);
   printf("Enter TRACE:");
   scanf("%d", &TRACE);
+  */
+
 
   srand(9999);              /* init random number generator */
   float sum = 0.0;                /* test random number generator for students */
@@ -418,14 +429,18 @@ int main()
   B_init();
 
   while (true) {
-    eventptr = evlist;            /* get next event to simulate */
+    /* get next event to simulate */
+    eventptr = evlist;
     if (eventptr == nullptr) {
       printf(" Simulator terminated at time %f\n after sending %d msgs from layer5\n", time, nsim);
       exit(0);
     }
-    evlist = evlist->next;        /* remove this event from event list */
+
+    /* remove this event from event list */
+    evlist = evlist->next;
     if (evlist != nullptr)
       evlist->prev = nullptr;
+
     if (TRACE >= 2) {
       printf("\nEVENT time: %f,", eventptr->evtime);
       printf("  type: %d", eventptr->evtype);
@@ -437,11 +452,19 @@ int main()
         printf(", fromlayer3 ");
       printf(" entity: %d\n", eventptr->eventity);
     }
-    time = eventptr->evtime;        /* update time to next event time */
-    if (nsim == nsimmax)
-      break;                        /* all done with simulation */
-    if (eventptr->evtype == FROM_LAYER5) {
-      generate_next_arrival();   /* set up future arrival */
+
+    /* update time to next event time */
+    time = eventptr->evtime;
+    if (nsim == nsimmax) {
+      /* all done with simulation */
+      break;
+    }
+
+    /* Handle events */
+    if (eventptr->evtype == FROM_LAYER5) { // send msg
+      /* set up future arrival */
+      generate_next_arrival();
+
       /* fill in msg to give with string of same letter */
       int j = nsim % 26;
       for (int i = 0; i < 20; i++)
@@ -452,23 +475,28 @@ int main()
           printf("%c", msg2give.data[i]);
         printf("\n");
       }
+
       nsim++;
       if (eventptr->eventity == A)
         A_output(msg2give);
       else
         B_output(msg2give);
-    } else if (eventptr->evtype == FROM_LAYER3) {
+
+    } else if (eventptr->evtype == FROM_LAYER3) { // msg arrived
       pkt2give.seqnum = eventptr->pktptr->seqnum;
       pkt2give.acknum = eventptr->pktptr->acknum;
       pkt2give.checksum = eventptr->pktptr->checksum;
       for (int i = 0; i < 20; i++)
         pkt2give.payload[i] = eventptr->pktptr->payload[i];
-      if (eventptr->eventity == A)      /* deliver packet by calling */
+
+      /* deliver packet by calling */
+      if (eventptr->eventity == A)
         A_input(pkt2give);            /* appropriate entity */
       else
         B_input(pkt2give);
-      free(eventptr->pktptr);          /* free the memory for packet */
-    } else if (eventptr->evtype == TIMER_INTERRUPT) {
+      free(eventptr->pktptr);
+
+    } else if (eventptr->evtype == TIMER_INTERRUPT) { // timer times up
       if (eventptr->eventity == A)
         A_timerinterrupt();
       else
