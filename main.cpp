@@ -230,7 +230,7 @@ void starttimer(int AorB, float increment) /* A or B is trying to stop timer */
 }
 
 
-void tolayer3(int AorB,pkt packet) /* A or B is trying to stop timer */
+void tolayer3(int AorB, pkt packet) /* A or B is trying to stop timer */
 {
   event *q;
   ntolayer3++;
@@ -315,13 +315,44 @@ void tolayer5(int AorB, char datasent[]) {
 
 
 /********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
+void checksum(pkt *packet)
+{
+  int sum = 0;
+  sum += packet->seqnum;
+  sum += packet->acknum;
+  // ignore the checksum field
+  for (int i = 0; i < 20; i++)
+    sum += packet->payload[i];
+
+  packet->checksum = sum;
+
+  // payload is 20 bytes, max is 20 * 255 = 5100
+  // seqnum and acknum is 0 or 1
+  // max of sum is 5100
+  // i.e. will not overflow
+}
 
 /* called from layer 5, passed the data to be sent to other side */
+int A_lastSentSeqNum;
+int A_lastRecievedAckNum;
+int A_lastRecievedSeqNum_Fm_B;
 void A_output(msg message)
 {
+  if(A_lastRecievedAckNum != A_lastSentSeqNum){
+    // Drop the message as we are still waiting for acknowledgement
+    return;
+  }
+
   /* Make packet */
+  pkt packet;
+  packet.seqnum = A_lastSentSeqNum + 1;
+  packet.acknum = A_lastRecievedSeqNum_Fm_B + 1; // useful only in bidirectional
+  for (int i = 0; i < 20; i++)
+    packet.payload[i] = message.data[i];
+  checksum(&packet);
 
   /* Send to layer 3 */
+  tolayer3(A, packet);
 
   /* Start timer */
 
@@ -378,7 +409,7 @@ void init()
   nsimmax = 1;
   lossprob = .0;
   corruptprob = .0;
-  lambda = 0.5;
+  lambda = 1000;
   TRACE = 2;
 
   /*
