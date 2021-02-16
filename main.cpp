@@ -95,7 +95,7 @@ int ncorrupt;              /* number corrupted by media*/
 /****************************************************************************/
 float jimsrand()
 {
-  float x = (float)(rand()/double(RAND_MAX));
+  auto x = (float)(rand()/double(RAND_MAX));
   return(x);
 }
 
@@ -146,9 +146,7 @@ void generate_next_arrival() {
   double x = lambda * jimsrand() * 2;  /* x is uniform on [0,2*lambda] */
   /* having mean of lambda        */
 
-  //evptr = (struct event *)malloc(sizeof(struct event));
   auto *evptr = new event;
-
   evptr->evtime = (float)(time + x);
   evptr->evtype = FROM_LAYER5;
   if (BIDIRECTIONAL && (jimsrand() > 0.5))
@@ -210,6 +208,7 @@ void starttimer(int AorB, float increment) /* A or B is trying to stop timer */
 
   if (TRACE > 2)
     printf("          START TIMER: starting timer at %f\n", time);
+
   /* be nice: check to see if timer is already started, if so, then  warn */
   /* for (q=evlist; q!=NULL && q->next!=NULL; q = q->next)  */
   for (q = evlist; q != nullptr; q = q->next)
@@ -219,10 +218,7 @@ void starttimer(int AorB, float increment) /* A or B is trying to stop timer */
     }
 
   /* create future event for when timer goes off */
-
-  //evptr = (struct event *) malloc(sizeof(struct event));
   auto *evptr = new event;
-
   evptr->evtime = time + increment;
   evptr->evtype = TIMER_INTERRUPT;
   evptr->eventity = AorB;
@@ -315,7 +311,15 @@ void tolayer5(int AorB, char datasent[]) {
 
 
 /********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
-void checksum(pkt *packet)
+/*Control parameters*/
+int maxSeqNum = 2;
+float timerWaitDuration = 5000; // number of time unit
+int ModuloAddition(int oldNum, int inc)
+{
+  return (oldNum + inc) % maxSeqNum;
+}
+
+int checksum(pkt *packet)
 {
   int sum = 0;
   sum += packet->seqnum;
@@ -324,38 +328,52 @@ void checksum(pkt *packet)
   for (int i = 0; i < 20; i++)
     sum += packet->payload[i];
 
-  packet->checksum = sum;
-
   // payload is 20 bytes, max is 20 * 255 = 5100
   // seqnum and acknum is 0 or 1
   // max of sum is 5100
   // i.e. will not overflow
+  return sum;
 }
 
+pkt makePacket(int seqNum, int ackNum, char data[])
+{
+  pkt packet{};
+  packet.seqnum = seqNum;
+  packet.acknum = ackNum;
+  for (int i = 0; i < 20; i++)
+    packet.payload[i] = data[i];
+  packet.checksum = checksum(&packet);
+
+  return packet;
+}
+
+
+/*State parameters */
+bool A_waitingState;
+pkt A_lastSendPacket;
+pkt A_lastSReceivedPacket;
+
 /* called from layer 5, passed the data to be sent to other side */
-int A_lastSentSeqNum;
-int A_lastRecievedAckNum;
-int A_lastRecievedSeqNum_Fm_B;
 void A_output(msg message)
 {
-  if(A_lastRecievedAckNum != A_lastSentSeqNum){
-    // Drop the message as we are still waiting for acknowledgement
+  if(A_waitingState){
+    // Drop the message if we are still waiting for acknowledgement
     return;
   }
 
-  /* Make packet */
-  pkt packet;
-  packet.seqnum = A_lastSentSeqNum + 1;
-  packet.acknum = A_lastRecievedSeqNum_Fm_B + 1; // useful only in bidirectional
-  for (int i = 0; i < 20; i++)
-    packet.payload[i] = message.data[i];
-  checksum(&packet);
+  // For alternating-bit-protocol, the sequent number is 0 or 1.
+  // In a more realistic situation, seqNumInc = size(packet.payload)
+  int seqNumInc = 1;
+  int seqNum = ModuloAddition(A_lastSendPacket.seqnum, seqNumInc);
+  int ackNum = A_lastSReceivedPacket.seqnum;
+  pkt packet = makePacket(seqNum, ackNum, message.data);
 
-  /* Send to layer 3 */
   tolayer3(A, packet);
 
-  /* Start timer */
+  A_waitingState = true;
+  A_lastSendPacket = packet;
 
+  starttimer(A, timerWaitDuration);
 }
 
 void B_output(msg message)  /* need be completed only for extra credit */
@@ -366,27 +384,84 @@ void B_output(msg message)  /* need be completed only for extra credit */
 /* called from layer 3, when a packet arrives for layer 4 */
 void A_input(pkt packet)
 {
+  if(packet.acknum != A_lastSendPacket.seqnum){
+    // the arrived packet is not the expected
+    return;
+  }
+  if(packet.checksum != checksum(&packet)){
+    // the packet is corrupted
+    return;
+  }
 
+  // No need to pass data to layer5
+
+  A_waitingState = false;
+  stoptimer(A);
+
+  A_lastSReceivedPacket = packet;
 }
 
 /* called when A's timer goes off */
 void A_timerinterrupt()
 {
+  // Resend packet
+  tolayer3(A, A_lastSendPacket);
 
+  starttimer(A, timerWaitDuration);
 }
 
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */
 void A_init()
 {
+  A_lastSendPacket = pkt();
+  A_lastSendPacket.seqnum = 1;
+  A_lastSendPacket.acknum = 0;
+
+  A_waitingState = false;
 }
 
 
 /* Note that with simplex transfer from a-to-B, there is no B_output() */
 
 /* called from layer 3, when a packet arrives for layer 4 at B*/
+pkt B_LastSentPacket;
+pkt B_LastReceivedPacket;
 void B_input(pkt packet)
 {
+  int B_expectedSeqNum = ModuloAddition(B_LastSentPacket.acknum, 1);
+  if(packet.seqnum != B_expectedSeqNum){
+    // the arrived packet is not the expected
+    tolayer3(B, B_LastSentPacket);
+    return;
+  }
+  if(packet.checksum != checksum(&packet)){
+    // the packet is corrupted
+    tolayer3(B, B_LastSentPacket);
+    return;
+  }
+
+  // expected packet arrived, pass the payload to application layer
+  tolayer5(B, packet.payload);
+
+  // Acknowledge correctly received packet
+  // For alternating-bit-protocol, the sequent number is 0 or 1.
+  // In a more realistic situation, ackNumInc = size(packet.payload)
+  int ackNumInc = 1;
+  int ackNum = (B_LastReceivedPacket.seqnum + ackNumInc) % maxSeqNum;
+  int seqNum = (B_LastSentPacket.seqnum + 1) % maxSeqNum;
+
+  // Since there is no field for declaring payload size, we
+  // create empty payload for the sake of simple coding
+  char data[20];
+  for (int i =0; i<20; i++)
+    data[i] = 0;
+  pkt ackPkt = makePacket(seqNum, ackNum, data);
+
+  tolayer3(B, ackPkt);
+
+  B_LastSentPacket = ackPkt;
+  B_LastReceivedPacket = packet;
 }
 
 /* called when B's timer goes off */
@@ -398,7 +473,19 @@ void B_timerinterrupt()
 /* entity B routines are called. You can use it to do any initialization */
 void B_init()
 {
+  B_LastSentPacket = pkt();
+  B_LastSentPacket.seqnum = 1;
+  B_LastSentPacket.acknum = 1;
+
+  B_LastReceivedPacket = pkt();
+  B_LastReceivedPacket.seqnum = 1;
+  B_LastReceivedPacket.acknum = 1;
 }
+
+/*
+ * Note that, because there is no handshaking process, we can't use random
+ * number for the initial sequence number.
+ */
 
 /************************************************************************/
 
@@ -406,11 +493,11 @@ void B_init()
 /* initialize the simulator */
 void init()
 {
-  nsimmax = 1;
+  nsimmax = 10;
   lossprob = .0;
   corruptprob = .0;
   lambda = 1000;
-  TRACE = 2;
+  TRACE = 10;
 
   /*
   printf("-----  Stop and Wait Network Simulator Version 1.1 -------- \n\n");
@@ -450,8 +537,8 @@ void init()
 int main()
 {
   event *eventptr;
-  msg  msg2give;
-  pkt  pkt2give;
+  msg  msg2give{};
+  pkt  pkt2give{};
 
   char c;
 
