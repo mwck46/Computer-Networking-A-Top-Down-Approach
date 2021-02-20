@@ -8,7 +8,7 @@ It demonstrates:
 1) receiver acknowledges the sender when a valid packet arrived
 2) sender retransmits lost or corrupted packets
 
-Original code, written is old style c, is available on http://gaia.cs.umass.edu/kurose/transport/prog2.c
+Original code, written in old style c, is available on http://gaia.cs.umass.edu/kurose/transport/prog2.c
 
 
 ## video_streaming
