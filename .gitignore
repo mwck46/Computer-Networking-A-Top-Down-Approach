@@ -36,3 +36,6 @@ cmake-build-*/
 
 # JetBrain CLion
 .idea/
+
+# JetBrain intellij
+out/
