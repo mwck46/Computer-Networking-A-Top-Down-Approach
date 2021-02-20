@@ -145,7 +145,6 @@ public class RTPpacket{
   //--------------------------
   //gettimestamp
   //--------------------------
-
   public int gettimestamp() {
     return(TimeStamp);
   }
