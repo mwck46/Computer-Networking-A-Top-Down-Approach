@@ -1,19 +1,19 @@
 //VideoStream
 
 import java.io.*;
+import java.nio.file.*;
 
 public class VideoStream {
-
   FileInputStream fis; //video file
   int frame_nb; //current frame nb
-
+  String videoFolder = "video";
   //-----------------------------------
   //constructor
   //-----------------------------------
   public VideoStream(String filename) throws Exception{
-
     //init variables
-    fis = new FileInputStream(filename);
+    Path filePath = Paths.get(videoFolder, filename);
+    fis = new FileInputStream(filePath.toString());
     frame_nb = 0;
   }
 

@@ -102,8 +102,10 @@ public class Server extends JFrame implements ActionListener {
     theServer.setVisible(true);
 
     //get RTSP socket port from the command line
-    //int RTSPport = Integer.parseInt(argv[0]);
-    int RTSPport = 7777;
+    int RTSPport = 55555;
+    if(argv.length > 0){
+      RTSPport = Integer.parseInt(argv[0]);
+    }
 
     //Initiate TCP connection with the client for the RTSP session
     ServerSocket listenSocket = new ServerSocket(RTSPport);
@@ -183,7 +185,6 @@ public class Server extends JFrame implements ActionListener {
   //Handler for timer
   //------------------------
   public void actionPerformed(ActionEvent e) {
-
     //if the current image nb is less than the length of the video
     if (imagenb < VIDEO_LENGTH) {
       //update current imagenb
@@ -217,9 +218,11 @@ public class Server extends JFrame implements ActionListener {
         System.out.println("Exception caught: " + ex);
         System.exit(0);
       }
+
     } else {
       //if we have reached the end of the video file, stop the timer
       timer.stop();
+
     }
   }
 
@@ -228,6 +231,7 @@ public class Server extends JFrame implements ActionListener {
   //------------------------------------
   private int parse_RTSP_request() {
     int request_type = -1;
+
     try {
       //parse request line and extract the request_type:
       String RequestLine = RTSPBufferedReader.readLine();
@@ -271,10 +275,13 @@ public class Server extends JFrame implements ActionListener {
         RTP_dest_port = Integer.parseInt(tokens.nextToken());
       }
       //else LastLine will be the SessionId line ... do not check for now.
+
     } catch (Exception ex) {
       System.out.println("Exception caught: " + ex);
       System.exit(0);
+
     }
+
     return (request_type);
   }
 
@@ -288,9 +295,12 @@ public class Server extends JFrame implements ActionListener {
       RTSPBufferedWriter.write("Session: " + RTSP_ID + CRLF);
       RTSPBufferedWriter.flush();
       //System.out.println("RTSP Server - Sent response to Client.");
+
     } catch (Exception ex) {
       System.out.println("Exception caught: " + ex);
       System.exit(0);
+
     }
+
   }
 }

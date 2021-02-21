@@ -116,12 +116,15 @@ public class Client {
 
     //get server RTSP port and IP address from the command line
     //------------------
-    int RTSP_server_port = Integer.parseInt(argv[1]);
-    String ServerHost = argv[0];
+    String ServerHost = "localhost";
+    int RTSP_server_port = 55555;
+    VideoFileName = "movie.Mjpeg";
+    if (argv.length > 0) {
+      ServerHost = argv[0];
+      RTSP_server_port = Integer.parseInt(argv[1]);
+      VideoFileName = argv[2];
+    }
     InetAddress ServerIPAddr = InetAddress.getByName(ServerHost);
-
-    //get video filename to request:
-    VideoFileName = argv[2];
 
     //Establish a TCP connection with the server to exchange RTSP messages
     //------------------
@@ -297,6 +300,7 @@ public class Client {
         //display the image as an ImageIcon object
         icon = new ImageIcon(image);
         iconLabel.setIcon(icon);
+
       } catch (InterruptedIOException iioe) {
         //System.out.println("Nothing to read");
       } catch (IOException ioe) {
@@ -338,6 +342,7 @@ public class Client {
     } catch (Exception ex) {
       System.out.println("Exception caught: " + ex);
       System.exit(0);
+
     }
 
     return (reply_code);

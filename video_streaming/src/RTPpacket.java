@@ -36,7 +36,7 @@ public class RTPpacket{
     Extension = 0;
     CC = 0;
     Marker = 0;
-    Ssrc = 0;
+    Ssrc = (int)(Math.random() * Integer.MAX_VALUE);
 
     //fill changing header fields:
     SequenceNumber = Framenb;
@@ -47,14 +47,31 @@ public class RTPpacket{
     //--------------------------
     header = new byte[HEADER_SIZE];
 
-    //.............
-    //TO COMPLETE
-    //.............
     //fill the header array of byte with RTP header fields
+    byte b1 = 0;
+    b1 = setFieldValueInByte(b1, Version, 2, 0);
+    b1 = setFieldValueInByte(b1, Padding, 1, 2);
+    b1 = setFieldValueInByte(b1, Extension, 1, 3);
+    b1 = setFieldValueInByte(b1, CC, 2, 4);
+    header[0] = b1;
 
-    //header[0] = ...
-    // .....
+    byte b2 = 0;
+    b2 = setFieldValueInByte(b2, Marker, 1, 0);
+    b2 = setFieldValueInByte(b2, PayloadType, 7, 1);
+    header[1] = b2;
 
+    header[2] = (byte)(SequenceNumber >> 8); // high-order bits
+    header[3] = (byte)(SequenceNumber & 0xFF); // low-order bits
+
+    header[4] = (byte)(TimeStamp >> 24);
+    header[5] = (byte)(TimeStamp >> 16);
+    header[6] = (byte)(TimeStamp >> 8);
+    header[7] = (byte)(TimeStamp & 0xFFFFFF);
+
+    header[8]  = (byte)(Ssrc >> 24);
+    header[9]  = (byte)(Ssrc >> 16);
+    header[10] = (byte)(Ssrc >> 8);
+    header[11] = (byte)(Ssrc & 0xFFFFFF);
 
     //fill the payload bitstream:
     //--------------------------
@@ -62,10 +79,11 @@ public class RTPpacket{
     payload = new byte[data_length];
 
     //fill payload array of byte from data (given in parameter of the constructor)
-    //......
+    for (int i=0; i < payload_size; i++)
+      payload[i] = data[i];
 
-    // ! Do not forget to uncomment method printheader() below !
-
+    //debug
+    printheader();
   }
 
   //--------------------------
@@ -163,26 +181,20 @@ public class RTPpacket{
     return(PayloadType);
   }
 
-
   //--------------------------
   //print headers without the SSRC
   //--------------------------
-  public void printheader()
-  {
-    //TO DO: uncomment
-    /*
-    for (int i=0; i < (HEADER_SIZE-4); i++)
-      {
-	for (int j = 7; j>=0 ; j--)
-	  if (((1<<j) & header[i] ) != 0)
-	    System.out.print("1");
-	else
-	  System.out.print("0");
-	System.out.print(" ");
-      }
+  public void printheader() {
+    for (int i = 0; i < (HEADER_SIZE - 4); i++) {
+      for (int j = 7; j >= 0; j--)
+        if (((1 << j) & header[i]) != 0)
+          System.out.print("1");
+        else
+          System.out.print("0");
+      System.out.print(" ");
+    }
 
     System.out.println();
-    */
   }
 
   //return the unsigned value of 8-bit integer nb
@@ -193,4 +205,8 @@ public class RTPpacket{
       return(256+nb);
   }
 
+  static byte setFieldValueInByte(byte b, int fieldValue, int fieldLength, int targetBitPosition){
+    int oldBitPosition = 8 - fieldLength; // 1 byte is 8bit
+    return (byte)(b | fieldValue << (oldBitPosition - targetBitPosition));
+  }
 }
